@@ -539,6 +539,7 @@ let dose_solver_callback ~criteria (_,universe,_ as cudf) =
       | Some c -> c
       | None -> raise (Common.CudfSolver.Error "External solver misconfigured")
     in
+    Gc.compact ();
     OpamSystem.command
       ~verbose:(OpamCoreConfig.(!r.debug_level >= 2))
       solver_command;
