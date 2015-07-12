@@ -229,14 +229,19 @@ let load_cudf_universe ?depopts ~build
   let cudf_universe = Cudf.load_universe [] in
   (* Doing opam2cudf for every package is inefficient (lots of Set.mem to
          check if it is installed, etc. Optimise by gathering all info first *)
+  Printf.fprintf stderr "Major Heap = %d\n%!" Gc.(let st = stat () in st.heap_words);
+  let i = ref 0 in
   OpamPackage.Set.iter
     (fun nv ->
        try Cudf.add_package cudf_universe @@
-         opam2cudf opam_universe ?depopts ~build version_map nv
+         opam2cudf opam_universe ?depopts ~build version_map nv;
+         incr i;
+         if !i mod 100 = 0 then Gc.major ();
        with Cudf.Constraint_violation s ->
          OpamConsole.error_and_exit "Malformed CUDF universe (%s)" s
     )
     opam_packages;
+  Printf.fprintf stderr "Major Heap = %d\n%!" Gc.(let st = stat () in st.heap_words);
   (* We can trim the universe here to get faster results, but we
      choose to keep it bigger to get more precise conflict messages. *)
   (* let universe = Algo.Depsolver.trim universe in *)
