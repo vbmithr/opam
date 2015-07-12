@@ -226,18 +226,17 @@ let load_cudf_universe ?depopts ~build
   let version_map = match version_map with
     | Some vm -> vm
     | None -> cudf_versions_map opam_universe opam_packages in
-  let cudf_universe =
-    let cudf_packages =
-      (* Doing opam2cudf for every package is inefficient (lots of Set.mem to
+  let cudf_universe = Cudf.load_universe [] in
+  (* Doing opam2cudf for every package is inefficient (lots of Set.mem to
          check if it is installed, etc. Optimise by gathering all info first *)
-      OpamPackage.Set.fold
-        (fun nv list ->
-           opam2cudf opam_universe ?depopts ~build version_map nv :: list)
-        opam_packages [] in
-    try Cudf.load_universe cudf_packages
-    with Cudf.Constraint_violation s ->
-      OpamConsole.error_and_exit "Malformed CUDF universe (%s)" s
-  in
+  OpamPackage.Set.iter
+    (fun nv ->
+       try Cudf.add_package cudf_universe @@
+         opam2cudf opam_universe ?depopts ~build version_map nv
+       with Cudf.Constraint_violation s ->
+         OpamConsole.error_and_exit "Malformed CUDF universe (%s)" s
+    )
+    opam_packages;
   (* We can trim the universe here to get faster results, but we
      choose to keep it bigger to get more precise conflict messages. *)
   (* let universe = Algo.Depsolver.trim universe in *)
